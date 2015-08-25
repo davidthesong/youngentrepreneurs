@@ -1,0 +1,17 @@
+/****** PLACE YOUR CUSTOM STYLES HERE ******/
+
+.signup-container{
+  bottom:10%!important;
+}
+.highlight{
+  color:#F13030;
+}
+.btn{
+  background-color:#F13030;
+}
+@media (max-width:768px){
+  .cover-title{
+    font-size:24px !important;
+    letter-spacing:10px !important;
+  }
+}
