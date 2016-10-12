@@ -1,5 +1,6 @@
 var mr_firstSectionHeight,
     mr_nav,
+    mr_fixedAt,
     mr_navOuterHeight,
     mr_navScrolled = false,
     mr_navFixed = false,
@@ -7,10 +8,17 @@ var mr_firstSectionHeight,
     mr_floatingProjectSections,
     mr_scrollTop = 0;
 
-$(document).ready(function() { 
+$(document).ready(function() { //variant-remove
     "use strict";
 
     // Smooth scroll to inner links
+    
+    $('.inner-link').each(function(){
+        var href = $(this).attr('href');
+        if(href.charAt(0) !== "#"){
+            $(this).removeClass('inner-link');
+        }
+    });
 
 	if($('.inner-link').length){
 		$('.inner-link').smoothScroll({
@@ -46,60 +54,11 @@ $(document).ready(function() {
 
     $('[data-toggle="tooltip"]').tooltip();
 
-    // Checkboxes
+    // Icon bulleted lists
 
-    $('.checkbox-option').click(function() {
-        $(this).toggleClass('checked');
-        var checkbox = $(this).find('input');
-        if (checkbox.prop('checked') === false) {
-            checkbox.prop('checked', true);
-        } else {
-            checkbox.prop('checked', false);
-        }
-    });
-
-    // Radio Buttons
-
-    $('.radio-option').click(function() {
-        $(this).closest('form').find('.radio-option').removeClass('checked');
-        $(this).addClass('checked');
-        $(this).find('input').prop('checked', true);
-    });
-
-
-    // Accordions
-
-    $('.accordion li').click(function() {
-        if ($(this).closest('.accordion').hasClass('one-open')) {
-            $(this).closest('.accordion').find('li').removeClass('active');
-            $(this).addClass('active');
-        } else {
-            $(this).toggleClass('active');
-        }
-    });
-
-    // Tabbed Content
-
-    $('.tabbed-content').each(function() {
-        $(this).append('<ul class="content"></ul>');
-    });
-
-    $('.tabs li').each(function() {
-        var originalTab = $(this),
-            activeClass = "";
-        if (originalTab.is('.tabs li:first-child')) {
-            activeClass = ' class="active"';
-        }
-        var tabContent = originalTab.find('.tab-content').detach().wrap('<li' + activeClass + '></li>').parent();
-        originalTab.closest('.tabbed-content').find('.content').append(tabContent);
-    });
-
-    $('.tabs li').click(function() {
-        $(this).closest('.tabs').find('li').removeClass('active');
-        $(this).addClass('active');
-        var liIndex = $(this).index() + 1;
-        $(this).closest('.tabbed-content').find('.content>li').removeClass('active');
-        $(this).closest('.tabbed-content').find('.content>li:nth-of-type(' + liIndex + ')').addClass('active');
+    $('ul[data-bullet]').each(function(){
+        var bullet = $(this).attr('data-bullet');
+        $(this).find('li').prepend('<i class="'+bullet+'"></i>');
     });
 
     // Progress Bars
@@ -118,7 +77,6 @@ $(document).ready(function() {
 
         $(window).resize(function() {
             $('.nav-container').css('min-height', $('nav').outerHeight(true));
-            console.error('nav outerheight: '+$('nav').outerHeight(true));
         });
 
         // Compensate the height of parallax element for inline nav
@@ -146,6 +104,7 @@ $(document).ready(function() {
 
     mr_nav = $('body .nav-container nav:first');
     mr_navOuterHeight = $('body .nav-container nav:first').outerHeight();
+        mr_fixedAt = typeof mr_nav.attr('data-fixed-at') !== typeof undefined ? parseInt(mr_nav.attr('data-fixed-at').replace('px', '')) : parseInt($('section:nth-of-type(1)').outerHeight());
     window.addEventListener("scroll", updateNav, false);
 
     // Menu dropdown positioning
@@ -179,8 +138,19 @@ $(document).ready(function() {
         }
     });
 
+    $('.menu li a').click(function() {
+        if ($(this).hasClass('inner-link')){
+            $(this).closest('.nav-bar').removeClass('nav-open');
+        }
+    });
+
     $('.module.widget-handle').click(function() {
         $(this).toggleClass('toggle-widget-handle');
+    });
+
+    $('.search-widget-handle .search-form input').click(function(e){
+        if (!e) e = window.event;
+        e.stopPropagation();
     });
     
     // Offscreen Nav
@@ -238,7 +208,7 @@ $(document).ready(function() {
         $(this).addClass('active');
 
         $(this).closest('.projects').find('.project').each(function() {
-            var filters = $(this).data('filter');
+            var filters = $(this).attr('data-filter');
 
             if (filters.indexOf(filter) == -1) {
                 $(this).addClass('inactive');
@@ -253,28 +223,36 @@ $(document).ready(function() {
     });
 
     // Twitter Feed
-
-    $('.tweets-feed').each(function(index) {
-        $(this).attr('id', 'tweets-' + index);
-    }).each(function(index) {
-
-        function handleTweets(tweets) {
-            var x = tweets.length;
-            var n = 0;
-            var element = document.getElementById('tweets-' + index);
-            var html = '<ul class="slides">';
-            while (n < x) {
-                html += '<li>' + tweets[n] + '</li>';
-                n++;
-            }
-            html += '</ul>';
-            element.innerHTML = html;
-            return html;
-        }
-
-        twitterFetcher.fetch($('#tweets-' + index).attr('data-widget-id'), '', 5, true, true, true, '', false, handleTweets);
-
-    });
+       jQuery('.tweets-feed').each(function(index) {
+           jQuery(this).attr('id', 'tweets-' + index);
+       }).each(function(index) {
+           
+           var TweetConfig = {
+               "id": jQuery('#tweets-' + index).attr('data-widget-id'),
+               "domId": '',
+               "maxTweets": jQuery('#tweets-' + index).attr('data-amount'),
+               "enableLinks": true,
+               "showUser": true,
+               "showTime": true,
+               "dateFunction": '',
+               "showRetweet": false,
+               "customCallback": handleTweets
+           };
+           function handleTweets(tweets) {
+               var x = tweets.length;
+               var n = 0;
+               var element = document.getElementById('tweets-' + index);
+               var html = '<ul class="slides">';
+               while (n < x) {
+                   html += '<li>' + tweets[n] + '</li>';
+                   n++;
+               }
+               html += '</ul>';
+               element.innerHTML = html;
+               return html;
+           }
+           twitterFetcher.fetch(TweetConfig);
+       });
 
     // Instagram Feed
     
@@ -283,47 +261,81 @@ $(document).ready(function() {
 			accessToken: '1406933036.fedaafa.feec3d50f5194ce5b705a1f11a107e0b',
 			clientID: 'fedaafacf224447e8aef74872d3820a1'
 		};	
+
+        $('.instafeed').each(function() {
+            var feedID = $(this).attr('data-user-name');
+            $(this).children('ul').spectragram('getUserFeed', {
+                query: feedID,
+                max: 12
+            });
+        });
     }   
 
-    $('.instafeed').each(function() {
-    	var feedID = $(this).attr('data-user-name') + '-';
-        $(this).children('ul').spectragram('getUserFeed', {
-            query: feedID,
-            max: 12
+   
+
+    // Flickr Feeds
+
+    if($('.flickr-feed').length){
+        $('.flickr-feed').each(function(){
+            var userID = $(this).attr('data-user-id');
+            var albumID = $(this).attr('data-album-id');
+            $(this).flickrPhotoStream({ id: userID, setId: albumID, container: '<li class="masonry-item" />' });   
+            setTimeout(function(){
+                initializeMasonry();
+                window.dispatchEvent(new Event('resize'));
+            }, 1000); 
         });
-    });
+
+    }
 
     // Image Sliders
-
-    $('.slider-all-controls').flexslider({});
-    $('.slider-paging-controls').flexslider({
-        animation: "slide",
-        directionNav: false
-    });
-    $('.slider-arrow-controls').flexslider({
-        controlNav: false
-    });
-    $('.slider-thumb-controls .slides li').each(function() {
-        var imgSrc = $(this).find('img').attr('src');
-        $(this).attr('data-thumb', imgSrc);
-    });
-    $('.slider-thumb-controls').flexslider({
-        animation: "slide",
-        controlNav: "thumbnails",
-        directionNav: true
-    });
-    $('.logo-carousel').flexslider({
-        minItems: 1,
-        maxItems: 4,
-        move: 1,
-        itemWidth: 200,
-        itemMargin: 0,
-        animation: "slide",
-        slideshow: true,
-        slideshowSpeed: 3000,
-        directionNav: false,
-        controlNav: false
-    });
+    if($('.slider-all-controls, .slider-paging-controls, .slider-arrow-controls, .slider-thumb-controls, .logo-carousel').length){
+        $('.slider-all-controls').flexslider({
+            start: function(slider){
+                if(slider.find('.slides li:first-child').find('.fs-vid-background video').length){
+                   slider.find('.slides li:first-child').find('.fs-vid-background video').get(0).play(); 
+                }
+            },
+            after: function(slider){
+                if(slider.find('.fs-vid-background video').length){
+                    if(slider.find('li:not(.flex-active-slide)').find('.fs-vid-background video').length){
+                        slider.find('li:not(.flex-active-slide)').find('.fs-vid-background video').get(0).pause();
+                    }
+                    if(slider.find('.flex-active-slide').find('.fs-vid-background video').length){
+                        slider.find('.flex-active-slide').find('.fs-vid-background video').get(0).play();
+                    }
+                }
+            }
+        });
+        $('.slider-paging-controls').flexslider({
+            animation: "slide",
+            directionNav: false
+        });
+        $('.slider-arrow-controls').flexslider({
+            controlNav: false
+        });
+        $('.slider-thumb-controls .slides li').each(function() {
+            var imgSrc = $(this).find('img').attr('src');
+            $(this).attr('data-thumb', imgSrc);
+        });
+        $('.slider-thumb-controls').flexslider({
+            animation: "slide",
+            controlNav: "thumbnails",
+            directionNav: true
+        });
+        $('.logo-carousel').flexslider({
+            minItems: 1,
+            maxItems: 4,
+            move: 1,
+            itemWidth: 200,
+            itemMargin: 0,
+            animation: "slide",
+            slideshow: true,
+            slideshowSpeed: 3000,
+            directionNav: false,
+            controlNav: false
+        });
+    }
     
     // Lightbox gallery titles
     
@@ -332,34 +344,281 @@ $(document).ready(function() {
     	$(this).attr('data-lightbox', galleryTitle);
     });
 
+    // Prepare embedded video modals
+
+    $('iframe[data-provider]').each(function(){
+        var provider = jQuery(this).attr('data-provider');
+        var videoID = jQuery(this).attr('data-video-id');
+        var autoplay = jQuery(this).attr('data-autoplay');
+        var vidURL = '';
+
+        if(provider == 'vimeo'){
+            vidURL = "http://player.vimeo.com/video/"+videoID+"?badge=0&title=0&byline=0&title=0&autoplay="+autoplay;
+            $(this).attr('data-src', vidURL);
+        }else if (provider == 'youtube'){
+            vidURL = "https://www.youtube.com/embed/"+videoID+"?showinfo=0&autoplay="+autoplay;
+            $(this).attr('data-src', vidURL);
+        }else{
+            console.log('Only Vimeo and Youtube videos are supported at this time');
+        }
+    });
+    
+    // Multipurpose Modals
+    
+    jQuery('.foundry_modal[modal-link]').remove();
+
+    if($('.foundry_modal').length && (!jQuery('.modal-screen').length)){
+        // Add a div.modal-screen if there isn't already one there.
+        var modalScreen = jQuery('<div />').addClass('modal-screen').appendTo('body');
+
+    }
+
+    jQuery('.foundry_modal').click(function(){
+        jQuery(this).addClass('modal-acknowledged');
+    });
+
+    jQuery(document).on('wheel mousewheel scroll', '.foundry_modal, .modal-screen', function(evt){
+        $(this).get(0).scrollTop += (evt.originalEvent.deltaY); 
+        return false;
+    });
+    
+    $('.modal-container:not([modal-link])').each(function(index) {
+        if(jQuery(this).find('iframe[src]').length){
+        	jQuery(this).find('.foundry_modal').addClass('iframe-modal');
+        	var iframe = jQuery(this).find('iframe');
+        	iframe.attr('data-src',iframe.attr('src'));
+            iframe.attr('src', '');
+
+        }
+        jQuery(this).find('.btn-modal').attr('modal-link', index);
+
+        // Only clone and append to body if there isn't already one there
+        if(!jQuery('.foundry_modal[modal-link="'+index+'"]').length){
+            jQuery(this).find('.foundry_modal').clone().appendTo('body').attr('modal-link', index).prepend(jQuery('<i class="ti-close close-modal">'));
+        }
+    });
+    
+    $('.btn-modal').unbind('click').click(function(){
+    	var linkedModal = jQuery('.foundry_modal[modal-link="' + jQuery(this).attr('modal-link') + '"]'),
+            autoplayMsg = "";
+        jQuery('.modal-screen').toggleClass('reveal-modal');
+        if(linkedModal.find('iframe').length){
+            if(linkedModal.find('iframe').attr('data-autoplay') === '1'){
+                var autoplayMsg = '&autoplay=1'
+            }
+        	linkedModal.find('iframe').attr('src', (linkedModal.find('iframe').attr('data-src') + autoplayMsg));
+        }
+        linkedModal.toggleClass('reveal-modal');
+        return false; 
+    });
+    
+    // Autoshow modals
+	
+	$('.foundry_modal[data-time-delay]').each(function(){
+		var modal = $(this);
+		var delay = modal.attr('data-time-delay');
+		modal.prepend($('<i class="ti-close close-modal">'));
+    	if(typeof modal.attr('data-cookie') != "undefined"){
+        	if(!mr_cookies.hasItem(modal.attr('data-cookie'))){
+                setTimeout(function(){
+        			modal.addClass('reveal-modal');
+        			$('.modal-screen').addClass('reveal-modal');
+        		},delay);
+            }
+        }else{
+            setTimeout(function(){
+                modal.addClass('reveal-modal');
+                $('.modal-screen').addClass('reveal-modal');
+            },delay);
+        }
+	});
+
+    // Exit modals
+    $('.foundry_modal[data-show-on-exit]').each(function(){
+        var modal = $(this);
+        var exitSelector = $(modal.attr('data-show-on-exit'));
+        // If a valid selector is found, attach leave event to show modal.
+        if($(exitSelector).length){
+            modal.prepend($('<i class="ti-close close-modal">'));
+            $(document).on('mouseleave', exitSelector, function(){
+                if(!$('body .reveal-modal').length){
+                    if(typeof modal.attr('data-cookie') !== typeof undefined){
+                        if(!mr_cookies.hasItem(modal.attr('data-cookie'))){
+                            modal.addClass('reveal-modal');
+                            $('.modal-screen').addClass('reveal-modal');
+                        }
+                    }else{
+                        modal.addClass('reveal-modal');
+                        $('.modal-screen').addClass('reveal-modal');
+                    }
+                }
+            });
+        }
+    });
+
+    // Autoclose modals
+
+    $('.foundry_modal[data-hide-after]').each(function(){
+        var modal = $(this);
+        var delay = modal.attr('data-hide-after');
+        if(typeof modal.attr('data-cookie') != "undefined"){
+            if(!mr_cookies.hasItem(modal.attr('data-cookie'))){
+                setTimeout(function(){
+                if(!modal.hasClass('modal-acknowledged')){
+                    modal.removeClass('reveal-modal');
+                    $('.modal-screen').removeClass('reveal-modal');
+                }
+                },delay); 
+            }
+        }else{
+            setTimeout(function(){
+                if(!modal.hasClass('modal-acknowledged')){
+                    modal.removeClass('reveal-modal');
+                    $('.modal-screen').removeClass('reveal-modal');
+                }
+            },delay); 
+        }
+    });
+    
+    jQuery('.close-modal:not(.modal-strip .close-modal)').unbind('click').click(function(){
+    	var modal = jQuery(this).closest('.foundry_modal');
+        modal.toggleClass('reveal-modal');
+        if(typeof modal.attr('data-cookie') !== "undefined"){
+            mr_cookies.setItem(modal.attr('data-cookie'), "true", Infinity);
+        }
+    	if(modal.find('iframe').length){
+            modal.find('iframe').attr('src', '');
+        }
+        jQuery('.modal-screen').removeClass('reveal-modal');
+    });
+    
+    jQuery('.modal-screen').unbind('click').click(function(){
+        if(jQuery('.foundry_modal.reveal-modal').find('iframe').length){
+            jQuery('.foundry_modal.reveal-modal').find('iframe').attr('src', '');
+        }
+    	jQuery('.foundry_modal.reveal-modal').toggleClass('reveal-modal');
+    	jQuery(this).toggleClass('reveal-modal');
+    });
+    
+    jQuery(document).keyup(function(e) {
+		 if (e.keyCode == 27) { // escape key maps to keycode `27`
+            if(jQuery('.foundry_modal').find('iframe').length){
+                jQuery('.foundry_modal').find('iframe').attr('src', '');
+            }
+			jQuery('.foundry_modal').removeClass('reveal-modal');
+			jQuery('.modal-screen').removeClass('reveal-modal');
+		}
+	});
+    
+    // Modal Strips
+    
+    jQuery('.modal-strip').each(function(){
+    	if(!jQuery(this).find('.close-modal').length){
+    		jQuery(this).append(jQuery('<i class="ti-close close-modal">'));
+    	}
+    	var modal = jQuery(this);
+
+        if(typeof modal.attr('data-cookie') != "undefined"){
+           
+            if(!mr_cookies.hasItem(modal.attr('data-cookie'))){
+            	setTimeout(function(){
+            		modal.addClass('reveal-modal');
+            	},1000);
+            }
+        }else{
+            setTimeout(function(){
+                    modal.addClass('reveal-modal');
+            },1000);
+        }
+    });
+    
+    jQuery('.modal-strip .close-modal').click(function(){
+        var modal = jQuery(this).closest('.modal-strip');
+        if(typeof modal.attr('data-cookie') != "undefined"){
+            mr_cookies.setItem(modal.attr('data-cookie'), "true", Infinity);
+        }
+    	jQuery(this).closest('.modal-strip').removeClass('reveal-modal');
+    	return false;
+    });
+
 
     // Video Modals
-    $('section').closest('body').find('.modal-video[video-link]').remove();
 
-    $('.modal-video-container').each(function(index) {
-        $(this).find('.play-button').attr('video-link', index);
-        $(this).find('.modal-video').clone().appendTo('body').attr('video-link', index);
+    jQuery('.close-iframe').click(function() {
+        jQuery(this).closest('.modal-video').removeClass('reveal-modal');
+        jQuery(this).siblings('iframe').attr('src', '');
+        jQuery(this).siblings('video').get(0).pause();
     });
 
-    $('.modal-video-container .play-button').click(function() {
-        var linkedVideo = $('section').closest('body').find('.modal-video[video-link="' + $(this).attr('video-link') + '"]');
-        linkedVideo.toggleClass('reveal-modal');
+    // Checkboxes
 
-        if (linkedVideo.find('video').length) {
-            linkedVideo.find('video').get(0).play();
-        }
-
-        if (linkedVideo.find('iframe').length) {
-            var iframe = linkedVideo.find('iframe');
-            var iframeSrc = iframe.attr('data-src') + '&autoplay=1';
-            iframe.attr('src', iframeSrc);
+    $('.checkbox-option').on("click",function() {
+        $(this).toggleClass('checked');
+        var checkbox = $(this).find('input');
+        if (checkbox.prop('checked') === false) {
+            checkbox.prop('checked', true);
+        } else {
+            checkbox.prop('checked', false);
         }
     });
 
-    $('section').closest('body').find('.close-iframe').click(function() {
-        $(this).closest('.modal-video').toggleClass('reveal-modal');
-        $(this).siblings('iframe').attr('src', '');
-        $(this).siblings('video').get(0).pause();
+    // Radio Buttons
+
+    $('.radio-option').click(function() {
+
+        var checked = $(this).hasClass('checked'); // Get the current status of the radio
+
+        var name = $(this).find('input').attr('name'); // Get the name of the input clicked
+
+        if (!checked) {
+
+            $('input[name="'+name+'"]').parent().removeClass('checked');
+
+            $(this).addClass('checked');
+
+            $(this).find('input').prop('checked', true);
+
+        }
+
+    });
+
+
+    // Accordions
+
+    $('.accordion li').click(function() {
+        if ($(this).closest('.accordion').hasClass('one-open')) {
+            $(this).closest('.accordion').find('li').removeClass('active');
+            $(this).addClass('active');
+        } else {
+            $(this).toggleClass('active');
+        }
+        if(typeof window.mr_parallax !== "undefined"){
+            setTimeout(mr_parallax.windowLoad, 500);
+        }
+    });
+
+    // Tabbed Content
+
+    $('.tabbed-content').each(function() {
+        $(this).append('<ul class="content"></ul>');
+    });
+
+    $('.tabs li').each(function() {
+        var originalTab = $(this),
+            activeClass = "";
+        if (originalTab.is('.tabs>li:first-child')) {
+            activeClass = ' class="active"';
+        }
+        var tabContent = originalTab.find('.tab-content').detach().wrap('<li' + activeClass + '></li>').parent();
+        originalTab.closest('.tabbed-content').find('.content').append(tabContent);
+    });
+
+    $('.tabs li').click(function() {
+        $(this).closest('.tabs').find('li').removeClass('active');
+        $(this).addClass('active');
+        var liIndex = $(this).index() + 1;
+        $(this).closest('.tabbed-content').find('.content>li').removeClass('active');
+        $(this).closest('.tabbed-content').find('.content>li:nth-of-type(' + liIndex + ')').addClass('active');
     });
 
     // Local Videos
@@ -374,18 +633,26 @@ $(document).ready(function() {
     // Youtube Videos
 
     $('section').closest('body').find('.player').each(function() {
+        var section = $(this).closest('section');
+        section.find('.container').addClass('fadeOut');
         var src = $(this).attr('data-video-id');
         var startat = $(this).attr('data-start-at');
         $(this).attr('data-property', "{videoURL:'http://youtu.be/" + src + "',containment:'self',autoPlay:true, mute:true, startAt:" + startat + ", opacity:1, showControls:false}");
     });
 
-    $('section').closest('body').find(".player").YTPlayer();
+	if($('.player').length){
+        $('.player').each(function(){
 
-    // FS Vid Background
+            var section = $(this).closest('section');
+            var player = section.find('.player');
+            player.YTPlayer();
+            player.on("YTPStart",function(e){
+                section.find('.container').removeClass('fadeOut');
+                section.find('.masonry-loader').addClass('fadeOut');
+            });
 
-    $(window).resize(function() {
-        resizeVid();
-    });
+        });
+    }
 
     // Interact with Map once the user has clicked (to prevent scrolling the page = zooming the map
 
@@ -413,8 +680,12 @@ $(document).ready(function() {
             });
         });
     }
-
-    // Contact form code
+    
+    //                                                            //
+    //                                                            //
+    // Contact form code                                          //
+    //                                                            //
+    //                                                            //
 
     $('form.form-email, form.form-newsletter').submit(function(e) {
 
@@ -423,21 +694,29 @@ $(document).ready(function() {
         else e.returnValue = false;
 
         var thisForm = $(this).closest('form.form-email, form.form-newsletter'),
+            submitButton = thisForm.find('button[type="submit"]'),
             error = 0,
             originalError = thisForm.attr('original-error'),
-            loadingSpinner, iFrame, userEmail, userFullName, userFirstName, userLastName, successRedirect;
+            preparedForm, iFrame, userEmail, userFullName, userFirstName, userLastName, successRedirect, formError, formSuccess;
 
         // Mailchimp/Campaign Monitor Mail List Form Scripts
         iFrame = $(thisForm).find('iframe.mail-list-form');
 
         thisForm.find('.form-error, .form-success').remove();
+        submitButton.attr('data-text', submitButton.text());
         thisForm.append('<div class="form-error" style="display: none;">' + thisForm.attr('data-error') + '</div>');
         thisForm.append('<div class="form-success" style="display: none;">' + thisForm.attr('data-success') + '</div>');
+        formError = thisForm.find('.form-error');
+        formSuccess = thisForm.find('.form-success');
+        thisForm.addClass('attempted-submit');
 
-
+        // Do this if there is an iframe, and it contains usable Mail Chimp / Campaign Monitor iframe embed code
         if ((iFrame.length) && (typeof iFrame.attr('srcdoc') !== "undefined") && (iFrame.attr('srcdoc') !== "")) {
 
             console.log('Mail list form signup detected.');
+            if (typeof originalError !== typeof undefined && originalError !== false) {
+                formError.html(originalError);
+            }
             userEmail = $(thisForm).find('.signup-email-field').val();
             userFullName = $(thisForm).find('.signup-name-field').val();
             if ($(thisForm).find('input.signup-first-name-field').length) {
@@ -449,97 +728,156 @@ $(document).ready(function() {
 
             // validateFields returns 1 on error;
             if (validateFields(thisForm) !== 1) {
-                console.log('Mail list signup form validation passed.');
-                console.log(userEmail);
-                console.log(userLastName);
-                console.log(userFirstName);
-                console.log(userFullName);
+                preparedForm = prepareSignup(iFrame);
 
-                iFrame.contents().find('#mce-EMAIL, #fieldEmail').val(userEmail);
-                iFrame.contents().find('#mce-LNAME, #fieldLastName').val(userLastName);
-                iFrame.contents().find('#mce-FNAME, #fieldFirstName').val(userFirstName);
-                iFrame.contents().find('#mce-NAME, #fieldName').val(userFullName);
-                iFrame.contents().find('form').attr('target', '_blank').submit();
-                successRedirect = thisForm.attr('success-redirect');
-                // For some browsers, if empty `successRedirect` is undefined; for others,
-                // `successRedirect` is false.  Check for both.
-                if (typeof successRedirect !== typeof undefined && successRedirect !== false && successRedirect !== "") {
-                    window.location = successRedirect;
+                preparedForm.find('#mce-EMAIL, #fieldEmail').val(userEmail);
+                preparedForm.find('#mce-LNAME, #fieldLastName').val(userLastName);
+                preparedForm.find('#mce-FNAME, #fieldFirstName').val(userFirstName);
+                preparedForm.find('#mce-NAME, #fieldName').val(userFullName);
+                thisForm.removeClass('attempted-submit');
+
+                // Hide the error if one was shown
+                formError.fadeOut(200);
+                // Create a new loading spinner in the submit button.
+                submitButton.html(jQuery('<div />').addClass('form-loading')).attr('disabled', 'disabled');
+                
+                try{
+                    $.ajax({
+                        url: preparedForm.attr('action'),
+                        crossDomain: true,
+                        data: preparedForm.serialize(),
+                        method: "GET",
+                        cache: false,
+                        dataType: 'json',
+                        contentType: 'application/json; charset=utf-8',
+                        success: function(data){
+                            // Request was a success, what was the response?
+                            if (data.result != "success" && data.Status != 200) {
+                                
+                                // Error from Mail Chimp or Campaign Monitor
+
+                                // Keep the current error text in a data attribute on the form
+                                formError.attr('original-error', formError.text());
+                                // Show the error with the returned error text.
+                                formError.html(data.msg).fadeIn(1000);
+                                formSuccess.fadeOut(1000);
+
+                                submitButton.html(submitButton.attr('data-text')).removeAttr('disabled');
+                            } else {
+                                
+                                // Got Success from Mail Chimp
+                                
+                                submitButton.html(submitButton.attr('data-text')).removeAttr('disabled');
+
+                                successRedirect = thisForm.attr('success-redirect');
+                                // For some browsers, if empty `successRedirect` is undefined; for others,
+                                // `successRedirect` is false.  Check for both.
+                                if (typeof successRedirect !== typeof undefined && successRedirect !== false && successRedirect !== "") {
+                                    window.location = successRedirect;
+                                }
+
+                                thisForm.find('input[type="text"]').val("");
+                                thisForm.find('textarea').val("");
+                                formSuccess.fadeIn(1000);
+
+                                formError.fadeOut(1000);
+                                setTimeout(function() {
+                                    formSuccess.fadeOut(500);
+                                }, 5000);
+                            }
+                        }
+                    });
+                }catch(err){
+                    // Keep the current error text in a data attribute on the form
+                    formError.attr('original-error', formError.text());
+                    // Show the error with the returned error text.
+                    formError.html(err.message).fadeIn(1000);
+                    formSuccess.fadeOut(1000);
+                    setTimeout(function() {
+                        formError.fadeOut(500);
+                    }, 5000);
+
+                    submitButton.html(submitButton.attr('data-text')).removeAttr('disabled');
                 }
+            
+
+                
             } else {
-                thisForm.find('.form-error').fadeIn(1000);
+                formError.fadeIn(1000);
                 setTimeout(function() {
-                    thisForm.find('.form-error').fadeOut(500);
+                    formError.fadeOut(500);
                 }, 5000);
             }
         } else {
+            // If no iframe detected then this is treated as an email form instead.
             console.log('Send email form detected.');
             if (typeof originalError !== typeof undefined && originalError !== false) {
-                thisForm.find('.form-error').text(originalError);
+                formError.text(originalError);
             }
-
 
             error = validateFields(thisForm);
 
-
             if (error === 1) {
-                $(this).closest('form').find('.form-error').fadeIn(200);
+                formError.fadeIn(200);
                 setTimeout(function() {
-                    $(thisForm).find('.form-error').fadeOut(500);
+                    formError.fadeOut(500);
                 }, 3000);
             } else {
+
+                thisForm.removeClass('attempted-submit');
+
                 // Hide the error if one was shown
-                $(this).closest('form').find('.form-error').fadeOut(200);
-                // Create a new loading spinner while hiding the submit button.
-                loadingSpinner = jQuery('<div />').addClass('form-loading').insertAfter($(thisForm).find('input[type="submit"]'));
-                $(thisForm).find('input[type="submit"]').hide();
+                formError.fadeOut(200);
+                
+                // Create a new loading spinner in the submit button.
+                submitButton.html(jQuery('<div />').addClass('form-loading')).attr('disabled', 'disabled');
 
                 jQuery.ajax({
                     type: "POST",
                     url: "mail/mail.php",
-                    data: thisForm.serialize(),
+                    data: thisForm.serialize()+"&url="+window.location.href,
                     success: function(response) {
                         // Swiftmailer always sends back a number representing numner of emails sent.
                         // If this is numeric (not Swift Mailer error text) AND greater than 0 then show success message.
-                        $(thisForm).find('.form-loading').remove();
 
-                        successRedirect = thisForm.attr('success-redirect');
-                        // For some browsers, if empty `successRedirect` is undefined; for others,
-                        // `successRedirect` is false.  Check for both.
-                        if (typeof successRedirect !== typeof undefined && successRedirect !== false && successRedirect !== "") {
-                            window.location = successRedirect;
-                        }
+                        submitButton.html(submitButton.attr('data-text')).removeAttr('disabled');
 
-                        $(thisForm).find('input[type="submit"]').show();
                         if ($.isNumeric(response)) {
                             if (parseInt(response) > 0) {
+                                // For some browsers, if empty 'successRedirect' is undefined; for others,
+                                // 'successRedirect' is false.  Check for both.
+                                successRedirect = thisForm.attr('success-redirect');
+                                if (typeof successRedirect !== typeof undefined && successRedirect !== false && successRedirect !== "") {
+                                    window.location = successRedirect;
+                                }
+
+
                                 thisForm.find('input[type="text"]').val("");
                                 thisForm.find('textarea').val("");
                                 thisForm.find('.form-success').fadeIn(1000);
 
-                                thisForm.find('.form-error').fadeOut(1000);
+                                formError.fadeOut(1000);
                                 setTimeout(function() {
-                                    thisForm.find('.form-success').fadeOut(500);
+                                    formSuccess.fadeOut(500);
                                 }, 5000);
                             }
                         }
                         // If error text was returned, put the text in the .form-error div and show it.
                         else {
                             // Keep the current error text in a data attribute on the form
-                            thisForm.find('.form-error').attr('original-error', thisForm.find('.form-error').text());
+                            formError.attr('original-error', formError.text());
                             // Show the error with the returned error text.
-                            thisForm.find('.form-error').text(response).fadeIn(1000);
-                            thisForm.find('.form-success').fadeOut(1000);
+                            formError.text(response).fadeIn(1000);
+                            formSuccess.fadeOut(1000);
                         }
                     },
                     error: function(errorObject, errorText, errorHTTP) {
                         // Keep the current error text in a data attribute on the form
-                        thisForm.find('.form-error').attr('original-error', thisForm.find('.form-error').text());
+                        formError.attr('original-error', formError.text());
                         // Show the error with the returned error text.
-                        thisForm.find('.form-error').text(errorHTTP).fadeIn(1000);
-                        thisForm.find('.form-success').fadeOut(1000);
-                        $(thisForm).find('.form-loading').remove();
-                        $(thisForm).find('input[type="submit"]').show();
+                        formError.text(errorHTTP).fadeIn(1000);
+                        formSuccess.fadeOut(1000);
+                        submitButton.html(submitButton.attr('data-text')).removeAttr('disabled');
                     }
                 });
             }
@@ -592,7 +930,13 @@ $(document).ready(function() {
 
             return error;
         }
-        // End contact form code
+
+    //
+    //    
+    // End contact form code
+    //
+    //
+
 
     // Get referrer from URL string 
     if (getURLParameter("ref")) {
@@ -635,44 +979,14 @@ $(document).ready(function() {
         } 
     }
 
-}); 
+}); //variant-remove
 
-$(window).load(function() { 
+$(window).load(function() { //variant-remove
     "use strict";
 
     // Initialize Masonry
 
-    if ($('.masonry').length) {
-        var container = document.querySelector('.masonry');
-        var msnry = new Masonry(container, {
-            itemSelector: '.masonry-item'
-        });
-
-        msnry.on('layoutComplete', function() {
-
-            mr_firstSectionHeight = $('.main-container section:nth-of-type(1)').outerHeight(true);
-
-            // Fix floating project filters to bottom of projects container
-
-            if ($('.filters.floating').length) {
-                setupFloatingProjectFilters();
-                updateFloatingFilters();
-                window.addEventListener("scroll", updateFloatingFilters, false);
-            }
-
-            $('.masonry').addClass('fadeIn');
-            $('.masonry-loader').addClass('fadeOut');
-            if ($('.masonryFlyIn').length) {
-                masonryFlyIn();
-            }
-        });
-
-        msnry.layout();
-    }
-
-    // Resize fullscreen video backgrounds to cover parent
-
-    resizeVid();
+    setTimeout(initializeMasonry, 1000);
 
     // Initialize twitter feed
 
@@ -693,27 +1007,7 @@ $(window).load(function() {
     mr_firstSectionHeight = $('.main-container section:nth-of-type(1)').outerHeight(true);
 
 
-}); 
-
-function resizeVid() {
-
-    $('.fs-vid-background video').each(function() {
-        var vid = $(this);
-        var ratio = (vid.width() / vid.height());
-        var section = vid.closest('section');
-        if (section.width() > section.outerHeight()) {
-            vid.css('width', (section.width() * ratio));
-            vid.css('margin-left', -((section.width() * ratio) / 4));
-            vid.css('height', 'auto');
-        } else {
-            vid.css('width', 'auto');
-            vid.css('height', (section.outerHeight() * ratio));
-            vid.css('margin-left', 0);
-        }
-    });
-
-}
-
+}); //variant-remove
 function updateNav() {
 
     var scrollY = mr_scrollTop;
@@ -734,7 +1028,7 @@ function updateNav() {
         return;
     }
 
-    if (scrollY > mr_firstSectionHeight) {
+    if (scrollY > mr_navOuterHeight + mr_fixedAt) {
         if (!mr_navScrolled) {
             mr_nav.addClass('scrolled');
             mr_navScrolled = true;
@@ -747,7 +1041,7 @@ function updateNav() {
                 mr_navFixed = true;
             }
 
-            if (scrollY > mr_navOuterHeight * 2) {
+            if (scrollY > mr_navOuterHeight + 10) {
                 if (!mr_outOfSight) {
                     mr_nav.addClass('outOfSight');
                     mr_outOfSight = true;
@@ -777,8 +1071,39 @@ function updateNav() {
     }
 }
 
+
 function capitaliseFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function initializeMasonry(){
+    $('.masonry').each(function(){
+        var container = $(this).get(0);
+        var msnry = new Masonry(container, {
+            itemSelector: '.masonry-item'
+        });
+
+        msnry.on('layoutComplete', function() {
+
+            mr_firstSectionHeight = $('.main-container section:nth-of-type(1)').outerHeight(true);
+
+            // Fix floating project filters to bottom of projects container
+
+            if ($('.filters.floating').length) {
+                setupFloatingProjectFilters();
+                updateFloatingFilters();
+                window.addEventListener("scroll", updateFloatingFilters, false);
+            }
+
+            $('.masonry').addClass('fadeIn');
+            $('.masonry-loader').addClass('fadeOut');
+            if ($('.masonryFlyIn').length) {
+                masonryFlyIn();
+            }
+        });
+
+        msnry.layout();
+    });
 }
 
 function masonryFlyIn() {
@@ -857,10 +1182,12 @@ window.initializeMaps = function(){
                         latitude      = latlong ? 1 *latlong.substr(0, latlong.indexOf(',')) : false,
                         longitude     = latlong ? 1 * latlong.substr(latlong.indexOf(",") + 1) : false,
                         geocoder      = new google.maps.Geocoder(),
-                        address       = typeof $(this).attr('data-address') !== "undefined" ? $(this).attr('data-address').split(';'): false,
+                        address       = typeof $(this).attr('data-address') !== "undefined" ? $(this).attr('data-address').split(';'): [""],
                         markerTitle   = "We Are Here",
+                        isDraggable = $(document).width() > 766 ? true : false,
                         map, marker, markerImage,
                         mapOptions = {
+                            draggable: isDraggable,
                             scrollwheel: false,
                             zoom: zoomLevel,
                             disableDefaultUI: true,
@@ -879,11 +1206,23 @@ window.initializeMaps = function(){
                                 map.setCenter(results[0].geometry.location);
                                 
                                 address.forEach(function(address){
-                                    var markerGeoCoder = new google.maps.Geocoder();
-                                    if(address.indexOf('[nomarker]') < 0){
+                                    var markerGeoCoder;
+                                    
+                                    markerImage = {url: window.mr_variant == undefined ? 'img/mapmarker.png' : '../img/mapmarker.png', size: new google.maps.Size(50,50), scaledSize: new google.maps.Size(50,50)};
+                                    if(/(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)/.test(address) ){
+                                        var latlong = address.split(','),
+                                        marker = new google.maps.Marker({
+                                                        position: { lat: 1*latlong[0], lng: 1*latlong[1] },
+                                                        map: map,
+                                                        icon: markerImage,
+                                                        title: markerTitle,
+                                                        optimised: false
+                                                    });
+                                    }
+                                    else if(address.indexOf('[nomarker]') < 0){
+                                        markerGeoCoder = new google.maps.Geocoder();
                                         markerGeoCoder.geocode( { 'address': address.replace('[nomarker]','')}, function(results, status) {
                                             if (status == google.maps.GeocoderStatus.OK) {
-                                                markerImage = {url: window.mr_variant == undefined ? 'img/mapmarker.png' : '../img/mapmarker.png', size: new google.maps.Size(50,50), scaledSize: new google.maps.Size(50,50)},
                                                 marker = new google.maps.Marker({
                                                     map: map,
                                                     icon: markerImage,
@@ -894,6 +1233,7 @@ window.initializeMaps = function(){
                                             }
                                         });
                                     }
+
                                 });
                             } else {
                                 console.log('There was a problem geocoding the address.');
@@ -917,3 +1257,119 @@ window.initializeMaps = function(){
     }
 }
 initializeMaps();
+
+// End of Maps
+
+
+
+
+// Prepare Signup Form - It is used to retrieve form details from an iframe Mail Chimp or Campaign Monitor form.
+
+function prepareSignup(iFrame){
+    var form   = jQuery('<form />'),
+        div    = jQuery('<div />'),
+        action;
+
+    jQuery(div).html(iFrame.attr('srcdoc'));
+    action = jQuery(div).find('form').attr('action');
+
+
+
+    // Alter action for a Mail Chimp-compatible ajax request url.
+    if(/list-manage\.com/.test(action)){
+       action = action.replace('/post?', '/post-json?') + "&c=?";
+       if(action.substr(0,2) == "//"){
+           action = 'http:' + action;
+       }
+    }
+
+    // Alter action for a Campaign Monitor-compatible ajax request url.
+    if(/createsend\.com/.test(action)){
+       action = action + '?callback=?';
+    }
+
+
+    // Set action on the form
+    form.attr('action', action);
+
+    // Clone form input fields from 
+    jQuery(div).find('input, select, textarea').not('input[type="submit"]').each(function(){
+        jQuery(this).clone().appendTo(form);
+
+    });
+
+    return form;
+        
+
+}
+
+
+
+/*\
+|*|  COOKIE LIBRARY THANKS TO MDN
+|*|
+|*|  A complete cookies reader/writer framework with full unicode support.
+|*|
+|*|  Revision #1 - September 4, 2014
+|*|
+|*|  https://developer.mozilla.org/en-US/docs/Web/API/document.cookie
+|*|  https://developer.mozilla.org/User:fusionchess
+|*|
+|*|  This framework is released under the GNU Public License, version 3 or later.
+|*|  http://www.gnu.org/licenses/gpl-3.0-standalone.html
+|*|
+|*|  Syntaxes:
+|*|
+|*|  * mr_cookies.setItem(name, value[, end[, path[, domain[, secure]]]])
+|*|  * mr_cookies.getItem(name)
+|*|  * mr_cookies.removeItem(name[, path[, domain]])
+|*|  * mr_cookies.hasItem(name)
+|*|  * mr_cookies.keys()
+|*|
+\*/
+
+var mr_cookies = {
+  getItem: function (sKey) {
+    if (!sKey) { return null; }
+    return decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null;
+  },
+  setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
+    if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return false; }
+    var sExpires = "";
+    if (vEnd) {
+      switch (vEnd.constructor) {
+        case Number:
+          sExpires = vEnd === Infinity ? "; expires=Fri, 31 Dec 9999 23:59:59 GMT" : "; max-age=" + vEnd;
+          break;
+        case String:
+          sExpires = "; expires=" + vEnd;
+          break;
+        case Date:
+          sExpires = "; expires=" + vEnd.toUTCString();
+          break;
+      }
+    }
+    document.cookie = encodeURIComponent(sKey) + "=" + encodeURIComponent(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
+    return true;
+  },
+  removeItem: function (sKey, sPath, sDomain) {
+    if (!this.hasItem(sKey)) { return false; }
+    document.cookie = encodeURIComponent(sKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "");
+    return true;
+  },
+  hasItem: function (sKey) {
+    if (!sKey) { return false; }
+    return (new RegExp("(?:^|;\\s*)" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=")).test(document.cookie);
+  },
+  keys: function () {
+    var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
+    for (var nLen = aKeys.length, nIdx = 0; nIdx < nLen; nIdx++) { aKeys[nIdx] = decodeURIComponent(aKeys[nIdx]); }
+    return aKeys;
+  }
+};
+
+/*\
+|*|  END COOKIE LIBRARY
+\*/
+
+
